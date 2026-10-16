@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Criptografado</title>
+  <!-- Biblioteca CryptoJS para Criptografia no Navegador -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 30px auto; }
+    #mensagens { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Chat Seguro (WebSockets)</h2>
+  <div id="mensagens"></div>
+  <input type="text" id="campoMensagem" placeholder="Digite sua mensagem...">
+  <button onclick="enviarMensagem()">Enviar</button>
+
+  <script>
+    const CHAVE_SECRETA = "minhaSenhaSecreta"; // Mesma chave compartilhada
+    const socket = new WebSocket('ws://localhost:3000');
+
+    socket.onopen = () => {
+      adicionarMensagem('Conectado ao servidor!');
+    };
+
+    // Recebe mensagem do servidor
+    socket.onmessage = (event) => {
+      try {
+        // Decifra a mensagem recebida
+        const bytes = CryptoJS.AES.decrypt(event.data, CHAVE_SECRETA);
+        const textoOriginal = bytes.toString(CryptoJS.enc.Utf8);
+
+        if (textoOriginal) {
+          adicionarMensagem(`[Recebido]: ${textoOriginal}`);
+        }
+      } catch (e) {
+        adicionarMensagem('[Erro]: Não foi possível decifrar a mensagem.');
+      }
+    };
+
+    // Envia mensagem criptografada
+    function enviarMensagem() {
+      const input = document.getElementById('campoMensagem');
+      const texto = input.value;
+      if (!texto) return;
+
+      // Criptografa antes de enviar
+      const textoCifrado = CryptoJS.AES.encrypt(texto, CHAVE_SECRETA).toString();
+      socket.send(textoCifrado);
+
+      adicionarMensagem(`[Você]: ${texto}`);
+      input.value = '';
+    }
+
+    function adicionarMensagem(msg) {
+      const div = document.getElementById('mensagens');
+      div.innerHTML += `<p>${msg}</p>`;
+      div.scrollTop = div.scrollHeight;
+    }
+  </script>
+</body>
+</html>
